@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}E-Commerce Store{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="{{ url_for('home') }}">E Commerce-Store</a>
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('home') }}">Home</a>
+                <a href="{{ url_for('products') }}">Products</a>
+                
+                <!-- Cart Link (only shown when logged in) -->
+                <a href="{{ url_for('cart') }}" id="cartLink" style="display: none;">Cart (<span id="cartCount">0</span>)</a>
+                
+                <!-- Authentication Links -->
+                <span id="authLinks">
+                    <a href="{{ url_for('login_page') }}" id="loginLink">Login</a>
+                    <a href="{{ url_for('signup') }}" id="signupLink">Sign Up</a>
+                </span>
+                
+                <!-- User Menu (shown when logged in) -->
+                <span id="userMenu" style="display: none;">
+                    <a href="#" id="logoutLink">Logout</a>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>POWERED BY M ABBAS</p>
+        </div>
+    </footer>
+
+    <script>
+        // Check if user is logged in and update UI accordingly
+        function checkAuthState() {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            if (token && user.id) {
+                // User is logged in - hide signup CTAs and auth links
+                const firstSignupCta = document.getElementById('firstSignupCta');
+                const endSignupCta = document.getElementById('endSignupCta');
+                
+                if (firstSignupCta) firstSignupCta.style.display = 'none';
+                if (endSignupCta) endSignupCta.style.display = 'none';
+                
+                // Update navbar - show cart and logout, hide auth links
+                document.getElementById('authLinks').style.display = 'none';
+                document.getElementById('userMenu').style.display = 'flex';
+                document.getElementById('cartLink').style.display = 'block';
+                
+                // Update cart count
+                updateCartCount();
+                
+                // Redirect admin users to admin dashboard
+                if (user.user_type === 'admin') {
+                    window.location.href = '/admin';
+                }
+            } else {
+                // User is not logged in - show signup CTAs and auth links, hide cart
+                const firstSignupCta = document.getElementById('firstSignupCta');
+                const endSignupCta = document.getElementById('endSignupCta');
+                
+                if (firstSignupCta) firstSignupCta.style.display = 'block';
+                if (endSignupCta) endSignupCta.style.display = 'block';
+                
+                // Update navbar - hide cart and user menu, show auth links
+                document.getElementById('authLinks').style.display = 'block';
+                document.getElementById('userMenu').style.display = 'none';
+                document.getElementById('cartLink').style.display = 'none';
+                
+                // Reset cart count
+                document.getElementById('cartCount').textContent = '0';
+            }
+        }
+
+        function updateCartCount() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('cartCount').textContent = '0';
+                return;
+            }
+            
+            fetch('/api/cart', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('cartCount').textContent = data.cart_count || 0;
+            })
+            .catch(error => {
+                console.error('Error updating cart count:', error);
+                document.getElementById('cartCount').textContent = '0';
+            });
+        }
+
+        // Global addToCart function
+        function addToCart(productId, quantity = 1) {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                alert('Please login to add items to cart');
+                window.location.href = '/login';
+                return;
+            }
+            
+            fetch('/api/cart/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({product_id: productId, quantity: quantity})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    alert('Product added to cart!');
+                    updateCartCount();
+                } else {
+                    alert(data.error || 'Error adding product to cart');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error adding product to cart');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthState();
+            
+            // Add logout handler
+            const logoutLink = document.getElementById('logoutLink');
+            if (logoutLink) {
+                logoutLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    alert('Logged out successfully!');
+                    window.location.href = '/';
+                });
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

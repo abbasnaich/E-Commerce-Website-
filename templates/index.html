@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Customer Greeting Banner -->
+<div id="customerGreeting" class="customer-greeting" style="display: none;">
+    <div class="greeting-content">
+        <h2>Welcome back, <span id="customerName"></span>! 👋</h2>
+        <a href="{{ url_for('products') }}" class="cta-button">Shop Now</a>
+    </div>
+</div>
+
+<!-- Hero Section (only shown when not logged in) -->
+<div id="heroSection" class="hero-section">
+    <div class="hero-content">
+        <h1>Welcome to Our E Commerce-Store</h1>
+        <p>Discover amazing products at great prices</p>
+        <a href="{{ url_for('products') }}" class="cta-button">Shop Now</a>
+    </div>
+</div>
+
+<section class="featured-products">
+    <h2>Featured Products</h2>
+    <div class="products-grid" id="featuredProducts">
+        <!-- Products will be loaded dynamically -->
+    </div>
+</section>
+
+<!-- Second Signup CTA at the end -->
+<section class="signup-cta" id="endSignupCta">
+    <a href="{{ url_for('signup') }}" class="cta-button">Create Account</a>
+</section>
+
+<script>
+    // Check if user is customer and show greeting, hide hero section
+    function showCustomerGreeting() {
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        // Show greeting only for customers on home page
+        if (token && user.id && user.user_type === 'customer') {
+            const greetingElement = document.getElementById('customerGreeting');
+            const heroSection = document.getElementById('heroSection');
+            const customerNameElement = document.getElementById('customerName');
+            
+            if (greetingElement && customerNameElement && heroSection) {
+                customerNameElement.textContent = user.first_name;
+                greetingElement.style.display = 'block';
+                heroSection.style.display = 'none'; // Hide the welcome titles
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        showCustomerGreeting();
+        
+        // Load featured products
+        fetch('/api/products?category=Electronics')
+            .then(response => response.json())
+            .then(products => {
+                const container = document.getElementById('featuredProducts');
+                if (container) {
+                    container.innerHTML = products.slice(0, 4).map(product => `
+                        <div class="product-card">
+                            <img src="${product.image}" alt="${product.name}" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+                            <h3>${product.name}</h3>
+                            <p class="price">$${product.price}</p>
+                            <p class="category">${product.category}</p>
+                            <button onclick="addToCart(${product.id})">Add to Cart</button>
+                            <a href="/product/${product.id}" class="view-details">View Details</a>
+                        </div>
+                    `).join('');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading featured products:', error);
+            });
+    });
+</script>
+{% endblock %}

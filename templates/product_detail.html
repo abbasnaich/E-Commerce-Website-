@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="product-detail">
+    <div class="product-detail-container">
+        <div class="product-image">
+            <img src="{{ product.image }}" alt="{{ product.name }}" 
+                 onerror="this.src='https://via.placeholder.com/400x400?text=No+Image'">
+        </div>
+        <div class="product-info">
+            <h1>{{ product.name }}</h1>
+            <p class="price">${{ "%.2f"|format(product.price) }}</p>
+            <p class="category">Category: {{ product.category }}</p>
+            <p class="stock">In Stock: {{ product.stock }}</p>
+            <p class="description">{{ product.description }}</p>
+            <div class="quantity-controls">
+                <label for="quantity">Quantity:</label>
+                <input type="number" id="quantity" value="1" min="1" max="{{ product.stock }}">
+            </div>
+            <button onclick="addToCartWithQuantity('{{ product.id }}')" class="add-to-cart-btn" id="addToCartBtn" style="display: none;">
+                Add to Cart
+            </button>
+            <button onclick="requireLogin()" class="login-required-btn" id="loginRequiredBtn" style="display: none;">
+                Login to Purchase
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function checkLoginState() {
+        const token = localStorage.getItem('token');
+        const isLoggedIn = !!(token && localStorage.getItem('user'));
+        
+        if (isLoggedIn) {
+            document.getElementById('addToCartBtn').style.display = 'block';
+            document.getElementById('loginRequiredBtn').style.display = 'none';
+        } else {
+            document.getElementById('addToCartBtn').style.display = 'none';
+            document.getElementById('loginRequiredBtn').style.display = 'block';
+        }
+    }
+
+    function addToCartWithQuantity(productId) {
+        const quantity = parseInt(document.getElementById('quantity').value);
+        const maxStock = parseInt("{{ product.stock }}") || 0;
+        
+        if (quantity > maxStock) {
+            alert(`Only ${maxStock} items available in stock`);
+            return;
+        }
+        
+        if (quantity < 1) {
+            alert('Please select at least 1 item');
+            return;
+        }
+        
+        addToCart(productId, quantity);
+    }
+
+    function requireLogin() {
+        alert('Please login to add items to cart');
+        window.location.href = '/login';
+    }
+
+    document.addEventListener('DOMContentLoaded', checkLoginState);
+</script>
+{% endblock %}
